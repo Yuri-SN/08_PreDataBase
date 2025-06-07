@@ -1,5 +1,4 @@
-#ifndef DBDATA_H
-#define DBDATA_H
+#pragma once
 
 #include <QDialog>
 
@@ -28,5 +27,3 @@ private:
     QVector<QString> data;
 
 };
-
-#endif // DBDATA_H

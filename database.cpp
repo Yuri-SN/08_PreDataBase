@@ -34,12 +34,17 @@ void DataBase::ConnectToDataBase(QVector<QString> data)
     dataBase->setPassword(data[pass]);
     dataBase->setPort(data[port].toInt());
 
-    /// Тут должен быть код ДЗ
+    dataBase->setHostName("981757-ca08998.tmweb.ru");
+    dataBase->setDatabaseName("netology_cpp");
+    dataBase->setUserName("netology_usr_cpp");
+    dataBase->setPassword("CppNeto3");
+    dataBase->setPort(5432);
 
-    bool status;
-    status = dataBase->open();
+    bool status = dataBase->open();
+
     emit sig_SendStatusConnection(status);
 }
+
 /*!
  * \brief Метод производит отключение от БД
  * \param Имя БД
@@ -49,14 +54,39 @@ void DataBase::DisconnectFromDataBase(QString nameDb)
     *dataBase = QSqlDatabase::database(nameDb);
     dataBase->close();
 }
-/*!
- * \brief Метод формирует запрос к БД.
- * \param request - SQL запрос
- * \return
- */
-void DataBase::RequestToDB(QString request)
+
+QSqlTableModel *DataBase::GetAllFilms()
 {
-    /// Тут должен быть код ДЗ
+    QSqlTableModel *model = new QSqlTableModel(nullptr, *dataBase);
+    model->setTable("film");
+    model->select();
+
+    for (int i = 2; i < model->columnCount(); ++i) {
+        model->setHeaderData(i, Qt::Horizontal, "", Qt::DisplayRole);
+    }
+
+    model->setHeaderData(0, Qt::Horizontal, "Название фильма");
+    model->setHeaderData(1, Qt::Horizontal, "Описание фильма");
+
+    return model;
+}
+
+QSqlQueryModel *DataBase::GetGenreFilms(const QString &genre)
+{
+    QSqlQueryModel *model = new QSqlQueryModel(this);
+
+    QString query = QString("SELECT title, description FROM film f "
+                            "JOIN film_category fc ON f.film_id = fc.film_id "
+                            "JOIN category c ON c.category_id = fc.category_id "
+                            "WHERE c.name = '%1'")
+                        .arg(genre);
+
+    model->setQuery(query, *dataBase);
+
+    model->setHeaderData(0, Qt::Horizontal, tr("Название фильма"));
+    model->setHeaderData(1, Qt::Horizontal, tr("Описание фильма"));
+
+    return model;
 }
 
 /*!
@@ -65,4 +95,26 @@ void DataBase::RequestToDB(QString request)
 QSqlError DataBase::GetLastError()
 {
     return dataBase->lastError();
+}
+
+void DataBase::SendDataToUI(int typeRequest)
+{
+    QSqlTableModel *tableModel = nullptr;
+    QSqlQueryModel *queryModel = nullptr;
+
+    switch (typeRequest) {
+    case requestAllFilms:
+        tableModel = GetAllFilms();
+        break;
+    case requestComedy:
+        queryModel = GetGenreFilms("Comedy");
+        break;
+    case requestHorrors:
+        queryModel = GetGenreFilms("Horror");
+        break;
+    default:
+        break;
+    }
+
+    emit sig_SendDataFromDB(tableModel, queryModel, typeRequest);
 }

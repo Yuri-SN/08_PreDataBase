@@ -1,12 +1,18 @@
 #include "mainwindow.h"
 #include "./ui_mainwindow.h"
 
+#include <QSqlQueryModel>
+#include <QSqlTableModel>
+#include <QTableView>
+#include <QtConcurrent>
+
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
 {
     // Исходное состояние виджетов
     ui->setupUi(this);
+
     ui->lb_statusConnect->setStyleSheet("color:red");
     ui->pb_request->setEnabled(false);
 
@@ -98,17 +104,31 @@ void MainWindow::on_act_connect_triggered()
  */
 void MainWindow::on_pb_request_clicked()
 {
-    /// Тут должен быть код ДЗ
+    QString filter = ui->cb_category->currentText();
+
+    if (filter == "Все")
+        dataBase->SendDataToUI(requestAllFilms);
+    else if (filter == "Комедия")
+        dataBase->SendDataToUI(requestComedy);
+    else if (filter == "Ужасы")
+        dataBase->SendDataToUI(requestHorrors);
 }
 
-/*!
- * \brief Слот отображает значение в QTableWidget
- * \param widget
- * \param typeRequest
- */
-void MainWindow::ScreenDataFromDB(const QTableWidget *widget, int typeRequest)
+void MainWindow::ScreenDataFromDB(QSqlTableModel *tableModel,
+                                  QSqlQueryModel *queryModel,
+                                  int typeRequest)
 {
-    /// Тут должен быть код ДЗ
+    switch (typeRequest) {
+    case requestAllFilms:
+        ui->tb_result->setModel(tableModel);
+        break;
+    case requestComedy:
+    case requestHorrors:
+        ui->tb_result->setModel(queryModel);
+        break;
+    default:
+        break;
+    }
 }
 
 /*!
@@ -131,4 +151,9 @@ void MainWindow::ReceiveStatusConnectionToDB(bool status)
         ui->lb_statusConnect->setStyleSheet("color:red");
         msg->exec();
     }
+}
+
+void MainWindow::on_pb_clear_clicked()
+{
+    ui->tb_result->setModel(nullptr);
 }

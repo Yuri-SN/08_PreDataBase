@@ -1,10 +1,11 @@
-#ifndef DATABASE_H
-#define DATABASE_H
+#pragma once
 
 #include <QObject>
 #include <QSqlDatabase>
 #include <QSqlError>
-#include <QTableWidget>
+#include <QSqlQueryModel>
+#include <QSqlTableModel>
+#include <QVector>
 
 #define POSTGRE_DRIVER "QPSQL"
 #define DB_NAME "MyDB"
@@ -16,35 +17,30 @@
 enum fieldsForConnect { hostName = 0, dbName = 1, login = 2, pass = 3, port = 4 };
 
 // Типы запросов
-enum requestType {
-
-    requestAllFilms = 1,
-    requestComedy = 2,
-    requestHorrors = 3
-
-};
+enum requestType { requestAllFilms = 1, requestComedy = 2, requestHorrors = 3 };
 
 class DataBase : public QObject
 {
     Q_OBJECT
 
 public:
-    explicit DataBase(QObject *parent = nullptr);
+    explicit DataBase(QObject* parent = nullptr);
     ~DataBase();
 
     void AddDataBase(QString driver, QString nameDB = "");
-    void DisconnectFromDataBase(QString nameDb = "");
-    void RequestToDB(QString request);
-    QSqlError GetLastError(void);
     void ConnectToDataBase(QVector<QString> dataForConnect);
+    void DisconnectFromDataBase(QString nameDb = "");
+
+    QSqlTableModel* GetAllFilms();
+    QSqlQueryModel* GetGenreFilms(const QString& genre);
+
+    QSqlError GetLastError(void);
+    void SendDataToUI(int typeRequest);
 
 signals:
-
-    void sig_SendDataFromDB(const QTableWidget *tableWg, int typeR);
-    void sig_SendStatusConnection(bool);
+    void sig_SendDataFromDB(QSqlTableModel*, QSqlQueryModel*, int typeRequest);
+    void sig_SendStatusConnection(bool status);
 
 private:
-    QSqlDatabase *dataBase;
+    QSqlDatabase* dataBase;
 };
-
-#endif // DATABASE_H
