@@ -2,6 +2,8 @@
 #define DATABASE_H
 
 #include <QObject>
+#include <QSqlDatabase>
+#include <QSqlError>
 #include <QTableWidget>
 
 #define POSTGRE_DRIVER "QPSQL"
