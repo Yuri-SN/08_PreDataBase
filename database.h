@@ -42,5 +42,5 @@ signals:
     void sig_SendStatusConnection(bool status);
 
 private:
-    QSqlDatabase* dataBase;
+    QSqlDatabase* m_dataBase{nullptr};
 };

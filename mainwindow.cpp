@@ -8,22 +8,22 @@
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
-    , ui(new Ui::MainWindow)
+    , m_ui(new Ui::MainWindow)
 {
     // Исходное состояние виджетов
-    ui->setupUi(this);
+    m_ui->setupUi(this);
 
-    ui->lb_statusConnect->setStyleSheet("color:red");
-    ui->pb_request->setEnabled(false);
+    m_ui->lb_statusConnect->setStyleSheet("color:red");
+    m_ui->pb_request->setEnabled(false);
 
     /*
    * Выделим память под необходимые объекты. Все они наследники
    * QObject, поэтому воспользуемся иерархией.
    */
 
-    dataDb = new DbData(this);
-    dataBase = new DataBase(this);
-    msg = new QMessageBox(this);
+    m_dataDb = new DbData(this);
+    m_dataBase = new DataBase(this);
+    m_msg = new QMessageBox(this);
 
     // Установим размер вектора данных для подключения к БД
     dataForConnect.resize(NUM_DATA_FOR_CONNECT_TO_DB);
@@ -31,13 +31,13 @@ MainWindow::MainWindow(QWidget *parent)
     /*
    * Добавим БД используя стандартный драйвер PSQL и зададим имя.
    */
-    dataBase->AddDataBase(POSTGRE_DRIVER, DB_NAME);
+    m_dataBase->AddDataBase(POSTGRE_DRIVER, DB_NAME);
 
     /*
    * Устанавливаем данные для подключениея к БД.
    * Поскольку метод небольшой используем лямбда-функцию.
    */
-    connect(dataDb, &DbData::sig_sendData, this, [&](QVector<QString> receivData) {
+    connect(m_dataDb, &DbData::sig_sendData, this, [&](QVector<QString> receivData) {
         dataForConnect = receivData;
     });
 
@@ -45,12 +45,12 @@ MainWindow::MainWindow(QWidget *parent)
    * Соединяем сигнал, который передает ответ от БД с методом, который
    * отображает ответ в ПИ
    */
-    connect(dataBase, &DataBase::sig_SendDataFromDB, this, &MainWindow::ScreenDataFromDB);
+    connect(m_dataBase, &DataBase::sig_SendDataFromDB, this, &MainWindow::ScreenDataFromDB);
 
     /*
    *  Сигнал для подключения к БД
    */
-    connect(dataBase,
+    connect(m_dataBase,
             &DataBase::sig_SendStatusConnection,
             this,
             &MainWindow::ReceiveStatusConnectionToDB);
@@ -58,7 +58,16 @@ MainWindow::MainWindow(QWidget *parent)
 
 MainWindow::~MainWindow()
 {
-    delete ui;
+    if (m_tableModel) {
+        delete m_tableModel;
+        m_tableModel = nullptr;
+    }
+    if (m_queryModel) {
+        delete m_queryModel;
+        m_queryModel = nullptr;
+    }
+
+    delete m_ui;
 }
 
 /*!
@@ -67,7 +76,7 @@ MainWindow::~MainWindow()
 void MainWindow::on_act_addData_triggered()
 {
     // Отобразим диалоговое окно. Какой метод нужно использовать?
-    dataDb->show();
+    m_dataDb->show();
 }
 
 /*!
@@ -83,19 +92,19 @@ void MainWindow::on_act_connect_triggered()
    * отключаемся
    */
 
-    if (ui->lb_statusConnect->text() == "Отключено") {
-        ui->lb_statusConnect->setText("Подключение");
-        ui->lb_statusConnect->setStyleSheet("color : black");
+    if (m_ui->lb_statusConnect->text() == "Отключено") {
+        m_ui->lb_statusConnect->setText("Подключение");
+        m_ui->lb_statusConnect->setStyleSheet("color : black");
 
-        auto conn = [&] { dataBase->ConnectToDataBase(dataForConnect); };
+        auto conn = [&] { m_dataBase->ConnectToDataBase(dataForConnect); };
         QtConcurrent::run(conn);
 
     } else {
-        dataBase->DisconnectFromDataBase(DB_NAME);
-        ui->lb_statusConnect->setText("Отключено");
-        ui->act_connect->setText("Подключиться");
-        ui->lb_statusConnect->setStyleSheet("color:red");
-        ui->pb_request->setEnabled(false);
+        m_dataBase->DisconnectFromDataBase(DB_NAME);
+        m_ui->lb_statusConnect->setText("Отключено");
+        m_ui->act_connect->setText("Подключиться");
+        m_ui->lb_statusConnect->setStyleSheet("color:red");
+        m_ui->pb_request->setEnabled(false);
     }
 }
 
@@ -104,27 +113,40 @@ void MainWindow::on_act_connect_triggered()
  */
 void MainWindow::on_pb_request_clicked()
 {
-    QString filter = ui->cb_category->currentText();
+    QString filter = m_ui->cb_category->currentText();
 
     if (filter == "Все")
-        dataBase->SendDataToUI(requestAllFilms);
+        m_dataBase->SendDataToUI(requestAllFilms);
     else if (filter == "Комедия")
-        dataBase->SendDataToUI(requestComedy);
+        m_dataBase->SendDataToUI(requestComedy);
     else if (filter == "Ужасы")
-        dataBase->SendDataToUI(requestHorrors);
+        m_dataBase->SendDataToUI(requestHorrors);
 }
 
-void MainWindow::ScreenDataFromDB(QSqlTableModel *tableModel,
-                                  QSqlQueryModel *queryModel,
+void MainWindow::ScreenDataFromDB(QSqlTableModel *newTableModel,
+                                  QSqlQueryModel *newQueryModel,
                                   int typeRequest)
 {
+    // Очищаем старые модели, если они были
+    if (m_tableModel) {
+        delete m_tableModel;
+        m_tableModel = nullptr;
+    }
+    if (m_queryModel) {
+        delete m_queryModel;
+        m_queryModel = nullptr;
+    }
+
+    // Привязываем новые модели к представлению
     switch (typeRequest) {
     case requestAllFilms:
-        ui->tb_result->setModel(tableModel);
+        m_tableModel = newTableModel;
+        m_ui->tb_result->setModel(m_tableModel);
         break;
     case requestComedy:
     case requestHorrors:
-        ui->tb_result->setModel(queryModel);
+        m_queryModel = newQueryModel;
+        m_ui->tb_result->setModel(m_queryModel);
         break;
     default:
         break;
@@ -139,21 +161,21 @@ void MainWindow::ScreenDataFromDB(QSqlTableModel *tableModel,
 void MainWindow::ReceiveStatusConnectionToDB(bool status)
 {
     if (status) {
-        ui->act_connect->setText("Отключиться");
-        ui->lb_statusConnect->setText("Подключено к БД");
-        ui->lb_statusConnect->setStyleSheet("color:green");
-        ui->pb_request->setEnabled(true);
+        m_ui->act_connect->setText("Отключиться");
+        m_ui->lb_statusConnect->setText("Подключено к БД");
+        m_ui->lb_statusConnect->setStyleSheet("color:green");
+        m_ui->pb_request->setEnabled(true);
     } else {
-        dataBase->DisconnectFromDataBase(DB_NAME);
-        msg->setIcon(QMessageBox::Critical);
-        msg->setText(dataBase->GetLastError().text());
-        ui->lb_statusConnect->setText("Отключено");
-        ui->lb_statusConnect->setStyleSheet("color:red");
-        msg->exec();
+        m_dataBase->DisconnectFromDataBase(DB_NAME);
+        m_msg->setIcon(QMessageBox::Critical);
+        m_msg->setText(m_dataBase->GetLastError().text());
+        m_ui->lb_statusConnect->setText("Отключено");
+        m_ui->lb_statusConnect->setStyleSheet("color:red");
+        m_msg->exec();
     }
 }
 
 void MainWindow::on_pb_clear_clicked()
 {
-    ui->tb_result->setModel(nullptr);
+    m_ui->tb_result->setModel(nullptr);
 }

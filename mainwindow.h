@@ -36,8 +36,10 @@ signals:
 private:
     QVector<QString> dataForConnect;
 
-    Ui::MainWindow *ui;
-    DbData *dataDb;
-    DataBase *dataBase;
-    QMessageBox *msg;
+    Ui::MainWindow *m_ui;
+    DbData *m_dataDb;
+    DataBase *m_dataBase;
+    QMessageBox *m_msg;
+    QSqlTableModel *m_tableModel{nullptr};
+    QSqlQueryModel *m_queryModel{nullptr};
 };

@@ -3,12 +3,12 @@
 DataBase::DataBase(QObject *parent)
     : QObject{parent}
 {
-    dataBase = new QSqlDatabase();
+    m_dataBase = new QSqlDatabase();
 }
 
 DataBase::~DataBase()
 {
-    delete dataBase;
+    delete m_dataBase;
 }
 
 /*!
@@ -18,7 +18,7 @@ DataBase::~DataBase()
  */
 void DataBase::AddDataBase(QString driver, QString nameDB)
 {
-    *dataBase = QSqlDatabase::addDatabase(driver, nameDB);
+    *m_dataBase = QSqlDatabase::addDatabase(driver, nameDB);
 }
 
 /*!
@@ -28,19 +28,19 @@ void DataBase::AddDataBase(QString driver, QString nameDB)
  */
 void DataBase::ConnectToDataBase(QVector<QString> data)
 {
-    dataBase->setHostName(data[hostName]);
-    dataBase->setDatabaseName(data[dbName]);
-    dataBase->setUserName(data[login]);
-    dataBase->setPassword(data[pass]);
-    dataBase->setPort(data[port].toInt());
+    m_dataBase->setHostName(data[hostName]);
+    m_dataBase->setDatabaseName(data[dbName]);
+    m_dataBase->setUserName(data[login]);
+    m_dataBase->setPassword(data[pass]);
+    m_dataBase->setPort(data[port].toInt());
 
-    dataBase->setHostName("981757-ca08998.tmweb.ru");
-    dataBase->setDatabaseName("netology_cpp");
-    dataBase->setUserName("netology_usr_cpp");
-    dataBase->setPassword("CppNeto3");
-    dataBase->setPort(5432);
+    m_dataBase->setHostName("981757-ca08998.tmweb.ru");
+    m_dataBase->setDatabaseName("netology_cpp");
+    m_dataBase->setUserName("netology_usr_cpp");
+    m_dataBase->setPassword("CppNeto3");
+    m_dataBase->setPort(5432);
 
-    bool status = dataBase->open();
+    bool status = m_dataBase->open();
 
     emit sig_SendStatusConnection(status);
 }
@@ -51,13 +51,14 @@ void DataBase::ConnectToDataBase(QVector<QString> data)
  */
 void DataBase::DisconnectFromDataBase(QString nameDb)
 {
-    *dataBase = QSqlDatabase::database(nameDb);
-    dataBase->close();
+    *m_dataBase = QSqlDatabase::database(nameDb);
+    m_dataBase->close();
 }
 
 QSqlTableModel *DataBase::GetAllFilms()
 {
-    QSqlTableModel *model = new QSqlTableModel(nullptr, *dataBase);
+    QSqlTableModel *model = new QSqlTableModel(nullptr, *m_dataBase);
+
     model->setTable("film");
     model->select();
 
@@ -81,7 +82,7 @@ QSqlQueryModel *DataBase::GetGenreFilms(const QString &genre)
                             "WHERE c.name = '%1'")
                         .arg(genre);
 
-    model->setQuery(query, *dataBase);
+    model->setQuery(query, *m_dataBase);
 
     model->setHeaderData(0, Qt::Horizontal, tr("Название фильма"));
     model->setHeaderData(1, Qt::Horizontal, tr("Описание фильма"));
@@ -94,7 +95,7 @@ QSqlQueryModel *DataBase::GetGenreFilms(const QString &genre)
  */
 QSqlError DataBase::GetLastError()
 {
-    return dataBase->lastError();
+    return m_dataBase->lastError();
 }
 
 void DataBase::SendDataToUI(int typeRequest)
